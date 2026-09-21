@@ -14909,25 +14909,34 @@ var _Sources = (() => {
   function absoluteHttpsUrl(rawUrl, baseUrl = BATCAVE_DOMAIN) {
     const cleaned = rawUrl.replace(/\\\//g, "/").trim();
     if (!cleaned) return "";
-    try {
-      const url = new URL(cleaned, `${baseUrl}/`);
-      url.protocol = "https:";
-      return url.toString();
-    } catch {
-      return "";
-    }
+    if (/^(?:data|javascript|file):/i.test(cleaned)) return "";
+    if (/^\/\//.test(cleaned)) return `https:${cleaned}`;
+    if (/^https?:\/\//i.test(cleaned)) return cleaned.replace(/^http:/i, "https:");
+    const secureBase = baseUrl.replace(/^http:/i, "https:").replace(/[?#].*$/, "");
+    const origin = secureBase.match(/^https:\/\/[^/]+/i)?.[0];
+    if (!origin) return "";
+    if (cleaned.startsWith("/")) return `${origin}${cleaned}`;
+    const basePath = secureBase.slice(origin.length);
+    const directory = !basePath || basePath === "/" ? `${origin}/` : secureBase.endsWith("/") ? secureBase : `${secureBase.slice(0, secureBase.lastIndexOf("/") + 1)}`;
+    return `${directory}${cleaned}`;
   }
   function parseMangaId(rawUrl) {
     if (!rawUrl) return "";
+    const encodedId = rawUrl.trim().replace(/[?#].*$/, "").replace(/\/+$/, "").replace(/^.*\//, "").replace(/\.html$/i, "");
     try {
-      const pathname = new URL(rawUrl, BATCAVE_DOMAIN).pathname;
-      return decodeURIComponent(pathname.split("/").filter(Boolean).pop() ?? "").replace(
-        /\.html$/i,
-        ""
-      );
+      return decodeURIComponent(encodedId);
     } catch {
-      return rawUrl.replace(/^.*\//, "").replace(/\.html$/i, "").trim();
+      return encodedId;
     }
+  }
+  function batcaveSearchUrl(title, page) {
+    const safePage = Number.isFinite(page) && page > 1 ? Math.floor(page) : 1;
+    const searchTerm = title.trim();
+    if (!searchTerm) {
+      return safePage === 1 ? `${BATCAVE_DOMAIN}/comix/` : `${BATCAVE_DOMAIN}/comix/page/${safePage}/`;
+    }
+    const searchRoot = `${BATCAVE_DOMAIN}/search/${encodeURIComponent(searchTerm)}`;
+    return safePage === 1 ? searchRoot : `${searchRoot}/page/${safePage}/`;
   }
   function lazyImage(rawUrl) {
     return absoluteHttpsUrl(rawUrl);
@@ -15106,7 +15115,7 @@ var _Sources = (() => {
 
   // src/KirboshBatCave/KirboshBatCave.ts
   var KirboshBatCaveInfo = {
-    version: "1.0.0",
+    version: "1.0.1",
     name: "BatCave",
     description: "Western comics from BatCave, maintained for Paperback 0.8.",
     author: "Kirbosh & Karrot",
@@ -15128,7 +15137,7 @@ var _Sources = (() => {
         interceptor: {
           interceptRequest: async (request) => {
             request.url = request.url.replace(/^http:/i, "https:");
-            const imageRequest = new URL(request.url).hostname === "img.batcave.biz";
+            const imageRequest = /^https:\/\/img\.batcave\.biz(?:[/:]|$)/i.test(request.url);
             request.headers = {
               ...request.headers ?? {},
               referer: imageRequest ? `${BATCAVE_DOMAIN}/` : BATCAVE_DOMAIN,
@@ -15156,6 +15165,11 @@ var _Sources = (() => {
         1
       );
       const html3 = response.data ?? "";
+      if (response.status === 403 || response.status === 503) {
+        throw new Error(
+          "BatCave needs Cloudflare verification. Open the BatCave source, tap the cloud icon, complete the check, then retry."
+        );
+      }
       if (response.status < 200 || response.status >= 400) {
         throw new Error(`BatCave returned HTTP ${response.status} for ${url}`);
       }
@@ -15243,7 +15257,7 @@ var _Sources = (() => {
     async getSearchResults(query, metadata) {
       const page = metadata?.page ?? 1;
       const title = query.title?.trim() ?? "";
-      const url = title ? `${BATCAVE_DOMAIN}/search/${encodeURIComponent(title)}/page/${page}/` : page === 1 ? `${BATCAVE_DOMAIN}/comix/` : `${BATCAVE_DOMAIN}/comix/page/${page}/`;
+      const url = batcaveSearchUrl(title, page);
       return this.resultsPage(await this.requestHtml(url), page, metadata?.collectedIds);
     }
     async getViewMoreItems(sectionId, metadata) {
