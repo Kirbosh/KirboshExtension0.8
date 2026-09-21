@@ -1,43 +1,72 @@
-name: Bundle and Publish Sources
-on: 
-  push:
-    branches:
-      - '**'
-      - '!main'
+name: Validate and publish Paperback 0.8 repository
+
+on:
+    pull_request:
+        branches:
+            - 0.8-stable
+    push:
+        branches:
+            - 0.8-stable
+    workflow_dispatch:
+
+permissions:
+    contents: write
+
+concurrency:
+    group: paperback-0.8-publish
+    cancel-in-progress: false
+
 jobs:
-  build:
-    name: Bundle and Publish Sources
-    runs-on: ubuntu-latest
+    build:
+        name: Build, test, and publish
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check out source
+              uses: actions/checkout@v4
 
-    strategy:
-      matrix:
-        node-version: [22]
+            - name: Set up Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  cache: npm
 
-    steps:
-      - name: Checkout Branch
-        uses: actions/checkout@v4.1.4
+            - name: Install locked dependencies
+              run: npm ci
 
-      - name: Setup Node.js environment
-        uses: actions/setup-node@v4.0.2
-        with:
-          node-version: ${{ matrix.node-version }}
-      
-      - name: Extract branch name
-        run: echo "branch=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_OUTPUT
-        id: extract_branch
+            - name: Check formatting
+              run: npm run format:check
 
-      - name: Checkout existing bundles
-        uses: actions/checkout@v4.1.4
-        continue-on-error: true
-        with:
-          ref: gh-pages
-          path: bundles
+            - name: Lint
+              run: npm run lint
 
-      - run: npm ci
-      - run: npm run bundle -- --folder=${{ steps.extract_branch.outputs.branch }}
+            - name: Type-check
+              run: npm run typecheck
 
-      - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4.6.0
-        with:
-          branch: gh-pages
-          folder: bundles
+            - name: Run parser tests
+              run: npm test
+
+            - name: Check out existing Pages output
+              if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+              uses: actions/checkout@v4
+              continue-on-error: true
+              with:
+                  ref: gh-pages
+                  path: bundles
+
+            - name: Prepare clean build directory for pull requests
+              if: github.event_name == 'pull_request'
+              run: mkdir -p bundles
+
+            - name: Generate standard Paperback repository
+              run: npm run build
+
+            - name: Verify generated repository
+              run: npm run verify:bundle
+
+            - name: Deploy GitHub Pages
+              if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+              uses: JamesIves/github-pages-deploy-action@v4.7.3
+              with:
+                  branch: gh-pages
+                  folder: bundles
+                  clean: false

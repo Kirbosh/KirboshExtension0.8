@@ -1,32 +1,35 @@
-name: Clean up published sources for deleted branch
-on: 
-  delete:
-    branches:
-      - '**'
-      - '!main'
+name: Remove previews for deleted branches
+
+on:
+    delete:
+
+permissions:
+    contents: write
+
 jobs:
-  delete:
-    if: github.event.ref_type == 'branch'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Clean up
-        run: |
-          echo "Clean up for branch ${{ github.event.ref }}"
+    delete:
+        if: github.event.ref_type == 'branch' && github.event.ref != '0.8-stable' && github.event.ref != 'gh-pages'
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check out Pages output
+              uses: actions/checkout@v4
+              with:
+                  ref: gh-pages
+                  path: bundles
 
-      - name: Checkout Branch
-        uses: actions/checkout@v4.1.2
+            - name: Resolve and remove the deleted branch preview
+              shell: bash
+              run: |
+                  target="$(realpath -m "bundles/${{ github.event.ref }}")"
+                  root="$(realpath bundles)"
+                  case "$target" in
+                    "$root"/*) rm -rf -- "$target" ;;
+                    *) echo "Refused unsafe cleanup target: $target" >&2; exit 1 ;;
+                  esac
 
-      - name: Checkout existing bundles
-        uses: actions/checkout@v4.1.2
-        continue-on-error: true
-        with:
-          ref: gh-pages
-          path: bundles
-
-      - run: rm -rf bundles/${{ github.event.ref }}
-
-      - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@4.6.1
-        with:
-          branch: gh-pages
-          folder: bundles
+            - name: Deploy cleaned Pages output
+              uses: JamesIves/github-pages-deploy-action@v4.7.3
+              with:
+                  branch: gh-pages
+                  folder: bundles
+                  clean: false
