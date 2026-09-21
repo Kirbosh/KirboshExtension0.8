@@ -1,0 +1,15 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "outDir": "../.test-output",
+    "rootDir": ".."
+  },
+  "include": [
+    "../src/KirboshBatCave/KirboshBatCaveParser.ts",
+    "./KirboshBatCaveParser.test.ts"
+  ]
+}

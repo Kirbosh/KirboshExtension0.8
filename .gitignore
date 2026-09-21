@@ -49,6 +49,10 @@ typings/
 
 # Optional npm cache directory
 .npm
+.npm-cache/
+.pnpm-home/
+.pnpm-store/
+.test-output/
 
 # Optional eslint cache
 .eslintcache
@@ -112,7 +116,6 @@ tmp
 #compiled sources
 reference
 
-.prettierrc
 .nyc_output
 coverage
 docs
@@ -122,4 +125,3 @@ docs
 # mac stuff
 .DS_Store
 todo
-package-lock.json
