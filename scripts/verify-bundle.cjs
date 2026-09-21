@@ -25,7 +25,7 @@ if (manifest.sources.length !== 1 || manifest.sources[0].id !== 'KirboshBatCave'
 const source = manifest.sources[0]
 if (
     source.name !== 'BatCave' ||
-    source.version !== '1.0.0' ||
+    source.version !== '1.0.1' ||
     source.contentRating !== 'MATURE' ||
     source.websiteBaseURL !== 'https://batcave.biz'
 ) {
@@ -43,7 +43,7 @@ for (const expected of [
     expectedDeepLink,
     'name="viewport" content="width=device-width, initial-scale=1"',
     'KirboshBatCave/includes/icon.png',
-    'Version 1.0.0',
+    'Version 1.0.1',
     'Mature',
     'English',
 ]) {
@@ -51,9 +51,18 @@ for (const expected of [
 }
 
 const generatedSource = readFileSync(join(outputDirectory, 'KirboshBatCave', 'source.js'), 'utf8')
-for (const expected of ['/reader/', 'window.__DATA__', 'img.batcave.biz']) {
+for (const expected of ['/reader/', 'window.__DATA__', 'img\\.batcave\\.biz']) {
     if (!generatedSource.includes(expected))
         throw new Error(`Source bundle is missing: ${expected}`)
+}
+for (const incompatible of [
+    'const imageRequest = new URL',
+    'const url = new URL(cleaned',
+    'const pathname = new URL(rawUrl',
+]) {
+    if (generatedSource.includes(incompatible)) {
+        throw new Error(`Paperback 0.8-incompatible URL global leaked into source: ${incompatible}`)
+    }
 }
 
 const forbiddenNames = [
@@ -85,4 +94,4 @@ if (png.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a') {
     throw new Error('BatCave icon is not a valid PNG')
 }
 
-console.log('Verified one-source Paperback 0.8 repository: KirboshBatCave 1.0.0')
+console.log('Verified one-source Paperback 0.8 repository: KirboshBatCave 1.0.1')

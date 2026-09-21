@@ -23,6 +23,7 @@ import {
 
 import {
     BATCAVE_DOMAIN,
+    batcaveSearchUrl,
     hasNextPage,
     looksLikeCloudflareChallenge,
     parseChapters,
@@ -34,7 +35,7 @@ import {
 } from './KirboshBatCaveParser'
 
 export const KirboshBatCaveInfo: SourceInfo = {
-    version: '1.0.0',
+    version: '1.0.1',
     name: 'BatCave',
     description: 'Western comics from BatCave, maintained for Paperback 0.8.',
     author: 'Kirbosh & Karrot',
@@ -71,7 +72,9 @@ export class KirboshBatCave
         interceptor: {
             interceptRequest: async (request: Request): Promise<Request> => {
                 request.url = request.url.replace(/^http:/i, 'https:')
-                const imageRequest = new URL(request.url).hostname === 'img.batcave.biz'
+                // Paperback 0.8 runs extensions in JavaScriptCore, where the browser URL
+                // global is unavailable on older iOS versions. Keep this check string-only.
+                const imageRequest = /^https:\/\/img\.batcave\.biz(?:[/:]|$)/i.test(request.url)
                 request.headers = {
                     ...(request.headers ?? {}),
                     referer: imageRequest ? `${BATCAVE_DOMAIN}/` : BATCAVE_DOMAIN,
@@ -101,6 +104,11 @@ export class KirboshBatCave
             1,
         )
         const html = response.data ?? ''
+        if (response.status === 403 || response.status === 503) {
+            throw new Error(
+                'BatCave needs Cloudflare verification. Open the BatCave source, tap the cloud icon, complete the check, then retry.',
+            )
+        }
         if (response.status < 200 || response.status >= 400) {
             throw new Error(`BatCave returned HTTP ${response.status} for ${url}`)
         }
@@ -196,11 +204,7 @@ export class KirboshBatCave
     async getSearchResults(query: SearchRequest, metadata?: PageMetadata): Promise<PagedResults> {
         const page = metadata?.page ?? 1
         const title = query.title?.trim() ?? ''
-        const url = title
-            ? `${BATCAVE_DOMAIN}/search/${encodeURIComponent(title)}/page/${page}/`
-            : page === 1
-            ? `${BATCAVE_DOMAIN}/comix/`
-            : `${BATCAVE_DOMAIN}/comix/page/${page}/`
+        const url = batcaveSearchUrl(title, page)
         return this.resultsPage(await this.requestHtml(url), page, metadata?.collectedIds)
     }
 

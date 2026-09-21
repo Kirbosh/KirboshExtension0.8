@@ -8,7 +8,7 @@ A focused, English-language Western comics repository for the App Store release 
 | ------- | -------- | ------ | ------------------------------------------------------------------------------------------------------ |
 | BatCave | English  | Mature | Search, pagination, popular/latest/catalogue sections, metadata, complete issue lists, and issue pages |
 
-BatCave uses Paperback 0.8’s Cloudflare bypass flow. If the site asks for verification, open the source website from Paperback, complete the verification once, then retry. No account, copied cookies, or credentials are required or included.
+BatCave uses Paperback 0.8's Cloudflare bypass flow. Before the first search, open BatCave in Paperback, tap the cloud icon in the source toolbar, complete BatCave's verification, close the verification view, and retry. Repeat this when BatCave expires its clearance cookie. No account, copied cookies, or credentials are required or included.
 
 No second source is included. ReadComicsOnline is unavailable or challenge-gated, ReadAllComics is presently unreliable, and download-only or public-domain-only sites do not meet this repository’s catalogue and reader requirements. A source will only be added after it passes the same live checks as BatCave.
 
