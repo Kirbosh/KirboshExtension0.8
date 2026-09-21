@@ -66,31 +66,52 @@ interface BatCaveData {
 export function absoluteHttpsUrl(rawUrl: string, baseUrl = BATCAVE_DOMAIN): string {
     const cleaned = rawUrl.replace(/\\\//g, '/').trim()
     if (!cleaned) return ''
+    if (/^(?:data|javascript|file):/i.test(cleaned)) return ''
+    if (/^\/\//.test(cleaned)) return `https:${cleaned}`
+    if (/^https?:\/\//i.test(cleaned)) return cleaned.replace(/^http:/i, 'https:')
 
-    try {
-        const url = new URL(cleaned, `${baseUrl}/`)
-        url.protocol = 'https:'
-        return url.toString()
-    } catch {
-        return ''
-    }
+    const secureBase = baseUrl.replace(/^http:/i, 'https:').replace(/[?#].*$/, '')
+    const origin = secureBase.match(/^https:\/\/[^/]+/i)?.[0]
+    if (!origin) return ''
+    if (cleaned.startsWith('/')) return `${origin}${cleaned}`
+
+    const basePath = secureBase.slice(origin.length)
+    const directory =
+        !basePath || basePath === '/'
+            ? `${origin}/`
+            : secureBase.endsWith('/')
+            ? secureBase
+            : `${secureBase.slice(0, secureBase.lastIndexOf('/') + 1)}`
+    return `${directory}${cleaned}`
 }
 
 export function parseMangaId(rawUrl: string): string {
     if (!rawUrl) return ''
 
+    const encodedId = rawUrl
+        .trim()
+        .replace(/[?#].*$/, '')
+        .replace(/\/+$/, '')
+        .replace(/^.*\//, '')
+        .replace(/\.html$/i, '')
     try {
-        const pathname = new URL(rawUrl, BATCAVE_DOMAIN).pathname
-        return decodeURIComponent(pathname.split('/').filter(Boolean).pop() ?? '').replace(
-            /\.html$/i,
-            '',
-        )
+        return decodeURIComponent(encodedId)
     } catch {
-        return rawUrl
-            .replace(/^.*\//, '')
-            .replace(/\.html$/i, '')
-            .trim()
+        return encodedId
     }
+}
+
+export function batcaveSearchUrl(title: string, page: number): string {
+    const safePage = Number.isFinite(page) && page > 1 ? Math.floor(page) : 1
+    const searchTerm = title.trim()
+    if (!searchTerm) {
+        return safePage === 1
+            ? `${BATCAVE_DOMAIN}/comix/`
+            : `${BATCAVE_DOMAIN}/comix/page/${safePage}/`
+    }
+
+    const searchRoot = `${BATCAVE_DOMAIN}/search/${encodeURIComponent(searchTerm)}`
+    return safePage === 1 ? searchRoot : `${searchRoot}/page/${safePage}/`
 }
 
 function lazyImage(rawUrl: string): string {

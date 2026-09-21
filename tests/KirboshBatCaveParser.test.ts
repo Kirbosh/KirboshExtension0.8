@@ -5,6 +5,7 @@ import test from 'node:test'
 
 import {
     absoluteHttpsUrl,
+    batcaveSearchUrl,
     extractWindowData,
     hasNextPage,
     looksLikeCloudflareChallenge,
@@ -70,9 +71,26 @@ test('reader parser returns absolute HTTPS pages with no blanks or duplicates', 
     ])
 })
 
-test('URL normalization rejects blanks and upgrades HTTP', () => {
+test('URL normalization is Paperback 0.8 safe and does not need the URL global', () => {
     assert.equal(absoluteHttpsUrl(''), '')
     assert.equal(absoluteHttpsUrl('http://img.batcave.biz/a.jpg'), 'https://img.batcave.biz/a.jpg')
+    assert.equal(absoluteHttpsUrl('//img.batcave.biz/b.jpg'), 'https://img.batcave.biz/b.jpg')
+    assert.equal(absoluteHttpsUrl('/uploads/c.jpg'), 'https://batcave.biz/uploads/c.jpg')
+    assert.equal(absoluteHttpsUrl('uploads/d.jpg'), 'https://batcave.biz/uploads/d.jpg')
+    assert.equal(
+        absoluteHttpsUrl('e.jpg', 'http://batcave.biz/reader/1/2'),
+        'https://batcave.biz/reader/1/e.jpg',
+    )
+    assert.equal(absoluteHttpsUrl('javascript:alert(1)'), '')
+})
+
+test('search routes use BatCave canonical page one and paginated later pages', () => {
+    assert.equal(batcaveSearchUrl('Batman', 1), 'https://batcave.biz/search/Batman')
+    assert.equal(
+        batcaveSearchUrl('Spider Man', 2),
+        'https://batcave.biz/search/Spider%20Man/page/2/',
+    )
+    assert.equal(batcaveSearchUrl('', 1), 'https://batcave.biz/comix/')
 })
 
 test('invalid and challenge responses fail locally without poisoning other parses', () => {
