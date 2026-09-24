@@ -17,6 +17,43 @@ import {
     parseSearchResults,
 } from '../src/KirboshBatCave/KirboshBatCaveParser'
 
+interface AppMock {
+    createRequestManager(): RequestManager
+    createRequest(info: {
+        url: string
+        method: string
+        headers?: Record<string, string>
+        data?: unknown
+    }): Request
+    createChapterDetails(info: ChapterDetails): ChapterDetails
+}
+
+interface HomeAppMock extends AppMock {
+    createPartialSourceManga(info: {
+        mangaId: string
+        image: string
+        title: string
+        subtitle?: string
+    }): {
+        mangaId: string
+        image: string
+        title: string
+        subtitle?: string
+    }
+    createHomeSection(info: {
+        id: string
+        title: string
+        type: string
+        items?: Array<{ mangaId: string; image: string; title: string; subtitle?: string }>
+        containsMoreItems: boolean
+    }): {
+        id: string
+        title: string
+        items: Array<{ mangaId: string; image: string; title: string; subtitle?: string }>
+        containsMoreItems: boolean
+    }
+}
+
 const fixture = (name: string): string =>
     readFileSync(join(process.cwd(), 'tests', 'fixtures', name), 'utf8')
 
@@ -101,11 +138,89 @@ test('search routes use BatCave canonical page one and paginated later pages', (
 
 test('invalid and challenge responses fail locally without poisoning other parses', () => {
     assert.equal(looksLikeCloudflareChallenge('<title>Just a moment...</title>'), true)
+    assert.equal(
+        looksLikeCloudflareChallenge(
+            '<script>const pow_nonce = 1; const pow_hash = "x"; xhr.open("POST", "/_v")</script>',
+        ),
+        true,
+    )
     assert.throws(
         () => extractWindowData('<html>ordinary error</html>'),
         /does not contain reader data/,
     )
     assert.equal(parseSearchResults(fixture('batman-search.html')).length, 2)
+})
+
+test('BatCave Discover survives a genuine root 404 by returning the catalogue', async () => {
+    const requestManager: RequestManager = {
+        requestsPerSecond: 3,
+        requestTimeout: 20000,
+        getDefaultUserAgent: async () => 'Paperback test',
+        schedule: async (request) => ({
+            status: request.url.endsWith('/comix/') ? 200 : 404,
+            headers: {},
+            request,
+            data: request.url.endsWith('/comix/') ? fixture('batman-search.html') : 'Not Found',
+        }),
+    }
+
+    const testGlobal = globalThis as unknown as { App: HomeAppMock }
+    testGlobal.App = {
+        createRequestManager: () => requestManager,
+        createRequest: (info) => ({ ...info, headers: info.headers ?? {}, cookies: [] } as Request),
+        createChapterDetails: (info) => info,
+        createPartialSourceManga: (info) => info,
+        createHomeSection: (info) => ({
+            id: info.id,
+            title: info.title,
+            items: info.items ?? [],
+            containsMoreItems: info.containsMoreItems,
+        }),
+    }
+
+    const { KirboshBatCave } = await import('../src/KirboshBatCave/KirboshBatCave')
+    const sections: Array<{ id: string; items: unknown[] }> = []
+    await new KirboshBatCave().getHomePageSections((section) => sections.push(section))
+
+    assert.deepEqual(
+        sections.map((section) => section.id),
+        ['catalogue'],
+    )
+    assert.equal(sections[0]?.items.length, 2)
+})
+
+test('BatCave classifies a bot-check 404 as verification instead of a missing page', async () => {
+    const requestManager: RequestManager = {
+        requestsPerSecond: 3,
+        requestTimeout: 20000,
+        getDefaultUserAgent: async () => 'Paperback test',
+        schedule: async (request) => ({
+            status: 404,
+            headers: {},
+            request,
+            data: '<script>const pow_nonce = 1; const pow_hash = "x"; xhr.open("POST", "/_v")</script>',
+        }),
+    }
+
+    const testGlobal = globalThis as unknown as { App: HomeAppMock }
+    testGlobal.App = {
+        createRequestManager: () => requestManager,
+        createRequest: (info) => ({ ...info, headers: info.headers ?? {}, cookies: [] } as Request),
+        createChapterDetails: (info) => info,
+        createPartialSourceManga: (info) => info,
+        createHomeSection: (info) => ({
+            id: info.id,
+            title: info.title,
+            items: info.items ?? [],
+            containsMoreItems: info.containsMoreItems,
+        }),
+    }
+
+    const { KirboshBatCave } = await import('../src/KirboshBatCave/KirboshBatCave')
+    await assert.rejects(
+        () => new KirboshBatCave().getHomePageSections(() => undefined),
+        /needs Cloudflare verification/,
+    )
 })
 
 test('chapter details use the AJAX reader directly and normalize its pages', async () => {
@@ -131,17 +246,6 @@ test('chapter details use the AJAX reader directly and normalize its pages', asy
                 }),
             }
         },
-    }
-
-    interface AppMock {
-        createRequestManager(): RequestManager
-        createRequest(info: {
-            url: string
-            method: string
-            headers?: Record<string, string>
-            data?: unknown
-        }): Request
-        createChapterDetails(info: ChapterDetails): ChapterDetails
     }
 
     const testGlobal = globalThis as unknown as { App: AppMock }

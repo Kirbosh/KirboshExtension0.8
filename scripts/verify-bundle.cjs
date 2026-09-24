@@ -32,7 +32,7 @@ const source = manifest.sources.find((entry) => entry.id === 'KirboshBatCave')
 if (
     !source ||
     source.name !== 'BatCave' ||
-    source.version !== '1.0.3' ||
+    source.version !== '1.0.4' ||
     source.contentRating !== 'MATURE' ||
     source.websiteBaseURL !== 'https://batcave.biz'
 ) {
@@ -60,7 +60,7 @@ for (const expected of [
     expectedDeepLink,
     'name="viewport" content="width=device-width, initial-scale=1"',
     'KirboshBatCave/includes/icon.png',
-    'Version 1.0.3',
+    'Version 1.0.4',
     'Mature',
     'English',
     'KirboshZipComic/includes/icon.png',
@@ -77,6 +77,8 @@ for (const expected of [
     'readcomicsonline',
     'pagination__btn-loader',
     'com.batcave.android',
+    'pow_nonce',
+    'HTTP 404',
 ]) {
     if (!generatedSource.includes(expected))
         throw new Error(`Source bundle is missing: ${expected}`)
@@ -150,4 +152,4 @@ if (zipPng.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a') {
     throw new Error('ZipComic icon is not a valid PNG')
 }
 
-console.log('Verified Paperback 0.8 repository: BatCave 1.0.3 and ZipComic 1.0.0')
+console.log('Verified Paperback 0.8 repository: BatCave 1.0.4 and ZipComic 1.0.0')

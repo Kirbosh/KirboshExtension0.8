@@ -356,7 +356,15 @@ export function parseReaderData(html: string): ParsedReaderData {
 
 export function looksLikeCloudflareChallenge(html: string): boolean {
     const lower = html.toLowerCase()
-    if (lower.includes('cf-chl-') || lower.includes('just a moment...')) return true
+    if (
+        lower.includes('cf-chl-') ||
+        lower.includes('just a moment...') ||
+        lower.includes('challenges.cloudflare.com') ||
+        (lower.includes('pow_nonce') && lower.includes('pow_hash')) ||
+        /\.open\(\s*["']POST["']\s*,\s*["']\/_v["']/.test(html)
+    ) {
+        return true
+    }
     const $ = cheerio.load(html)
     return $(SELECTORS.challenge).length > 0
 }

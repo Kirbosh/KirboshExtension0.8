@@ -35,7 +35,7 @@ import {
 } from './KirboshBatCaveParser'
 
 export const KirboshBatCaveInfo: SourceInfo = {
-    version: '1.0.3',
+    version: '1.0.4',
     name: 'BatCave',
     description: 'Western comics from BatCave, maintained for Paperback 0.8.',
     author: 'Kirbosh & Karrot',
@@ -108,7 +108,11 @@ export class KirboshBatCave
             1,
         )
         const html = response.data ?? ''
-        if (response.status === 403 || response.status === 503) {
+        if (
+            response.status === 403 ||
+            response.status === 503 ||
+            looksLikeCloudflareChallenge(html)
+        ) {
             throw new Error(
                 'BatCave needs Cloudflare verification. Open the BatCave source, tap the cloud icon, complete the check, then retry.',
             )
@@ -117,11 +121,6 @@ export class KirboshBatCave
             throw new Error(`BatCave returned HTTP ${response.status} for ${url}`)
         }
         if (!html.trim()) throw new Error(`BatCave returned an empty response for ${url}`)
-        if (looksLikeCloudflareChallenge(html)) {
-            throw new Error(
-                'BatCave requires Cloudflare verification. Open the source in Paperback and retry.',
-            )
-        }
         return html
     }
 
@@ -171,29 +170,35 @@ export class KirboshBatCave
     }
 
     async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
-        const [homeHtml, catalogueHtml] = await Promise.all([
-            this.requestHtml(BATCAVE_DOMAIN),
-            this.requestHtml(`${BATCAVE_DOMAIN}/comix/`),
-        ])
+        const catalogueHtml = await this.requestHtml(`${BATCAVE_DOMAIN}/comix/`)
+        let homeHtml: string | undefined
+        try {
+            homeHtml = await this.requestHtml(`${BATCAVE_DOMAIN}/`)
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error)
+            if (!message.includes('HTTP 404')) throw error
+        }
 
-        sectionCallback(
-            App.createHomeSection({
-                id: 'popular',
-                title: 'Popular',
-                containsMoreItems: false,
-                type: HomeSectionType.singleRowLarge,
-                items: parsePopular(homeHtml).map((card) => this.partialManga(card)),
-            }),
-        )
-        sectionCallback(
-            App.createHomeSection({
-                id: 'latest',
-                title: 'Latest',
-                containsMoreItems: true,
-                type: HomeSectionType.singleRowNormal,
-                items: parseLatest(homeHtml).map((card) => this.partialManga(card)),
-            }),
-        )
+        if (homeHtml) {
+            sectionCallback(
+                App.createHomeSection({
+                    id: 'popular',
+                    title: 'Popular',
+                    containsMoreItems: false,
+                    type: HomeSectionType.singleRowLarge,
+                    items: parsePopular(homeHtml).map((card) => this.partialManga(card)),
+                }),
+            )
+            sectionCallback(
+                App.createHomeSection({
+                    id: 'latest',
+                    title: 'Latest',
+                    containsMoreItems: true,
+                    type: HomeSectionType.singleRowNormal,
+                    items: parseLatest(homeHtml).map((card) => this.partialManga(card)),
+                }),
+            )
+        }
         sectionCallback(
             App.createHomeSection({
                 id: 'catalogue',
