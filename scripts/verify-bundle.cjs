@@ -10,6 +10,8 @@ const requiredFiles = [
     'versioning.json',
     'KirboshBatCave/source.js',
     'KirboshBatCave/includes/icon.png',
+    'KirboshZipComic/source.js',
+    'KirboshZipComic/includes/icon.png',
 ]
 for (const file of requiredFiles) {
     if (!existsSync(join(outputDirectory, file))) throw new Error(`Missing generated file: ${file}`)
@@ -19,17 +21,32 @@ const manifest = JSON.parse(readFileSync(join(outputDirectory, 'versioning.json'
 if (manifest.builtWith.toolchain !== '0.8.7' || manifest.builtWith.types !== '0.8.7') {
     throw new Error('Generated repository does not use Paperback 0.8.7 tooling and types')
 }
-if (manifest.sources.length !== 1 || manifest.sources[0].id !== 'KirboshBatCave') {
-    throw new Error('Published manifest must contain only KirboshBatCave')
-}
-const source = manifest.sources[0]
 if (
+    manifest.sources.length !== 2 ||
+    !manifest.sources.some((source) => source.id === 'KirboshBatCave') ||
+    !manifest.sources.some((source) => source.id === 'KirboshZipComic')
+) {
+    throw new Error('Published manifest must contain KirboshBatCave and KirboshZipComic')
+}
+const source = manifest.sources.find((entry) => entry.id === 'KirboshBatCave')
+if (
+    !source ||
     source.name !== 'BatCave' ||
     source.version !== '1.0.3' ||
     source.contentRating !== 'MATURE' ||
     source.websiteBaseURL !== 'https://batcave.biz'
 ) {
     throw new Error('BatCave metadata in versioning.json is incorrect')
+}
+const zipComic = manifest.sources.find((entry) => entry.id === 'KirboshZipComic')
+if (
+    !zipComic ||
+    zipComic.name !== 'ZipComic' ||
+    zipComic.version !== '1.0.0' ||
+    zipComic.contentRating !== 'MATURE' ||
+    zipComic.websiteBaseURL !== 'https://www.zipcomic.com'
+) {
+    throw new Error('ZipComic metadata in versioning.json is incorrect')
 }
 
 const index = readFileSync(join(outputDirectory, 'index.html'), 'utf8')
@@ -46,6 +63,9 @@ for (const expected of [
     'Version 1.0.3',
     'Mature',
     'English',
+    'KirboshZipComic/includes/icon.png',
+    'Version 1.0.0',
+    'ZipComic',
 ]) {
     if (!index.includes(expected)) throw new Error(`Landing page is missing: ${expected}`)
 }
@@ -60,6 +80,32 @@ for (const expected of [
 ]) {
     if (!generatedSource.includes(expected))
         throw new Error(`Source bundle is missing: ${expected}`)
+}
+
+const generatedZipComic = readFileSync(
+    join(outputDirectory, 'KirboshZipComic', 'source.js'),
+    'utf8',
+)
+for (const expected of [
+    'www.zipcomic.com',
+    'search?kwd=',
+    'img.img-responsive',
+    '-issue-',
+    '#images img',
+    'ZipComic needs Cloudflare verification',
+]) {
+    if (!generatedZipComic.includes(expected)) {
+        throw new Error(`ZipComic source bundle is missing: ${expected}`)
+    }
+}
+for (const incompatible of [
+    'Application.executeInWebView',
+    'const url = new URL(cleaned',
+    'const pathname = new URL(rawUrl',
+]) {
+    if (generatedZipComic.includes(incompatible)) {
+        throw new Error(`Paperback 0.8-incompatible code leaked into ZipComic: ${incompatible}`)
+    }
 }
 for (const incompatible of [
     'const imageRequest = new URL',
@@ -99,5 +145,9 @@ const png = readFileSync(join(outputDirectory, 'KirboshBatCave', 'includes', 'ic
 if (png.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a') {
     throw new Error('BatCave icon is not a valid PNG')
 }
+const zipPng = readFileSync(join(outputDirectory, 'KirboshZipComic', 'includes', 'icon.png'))
+if (zipPng.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a') {
+    throw new Error('ZipComic icon is not a valid PNG')
+}
 
-console.log('Verified one-source Paperback 0.8 repository: KirboshBatCave 1.0.3')
+console.log('Verified Paperback 0.8 repository: BatCave 1.0.3 and ZipComic 1.0.0')

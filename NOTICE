@@ -7,6 +7,8 @@ https://github.com/karrot0/kakarotextension0.8
 
 The BatCave source retains attribution to its original implementation and was modified in 2026 for BatCave's current routes, markup, embedded issue data, reader data, URL handling, and Paperback 0.8 repository identity.
 
+The ZipComic source is adapted from Karrot's Paperback 0.9 implementation and was ported in 2026 to Paperback 0.8 request, source, chapter, homepage, and Cloudflare APIs under an independent source identifier.
+
 This project is distributed under the GNU General Public License, version 3 or (at your option) any later version. See LICENSE.
 
-Third-party build dependencies, including @paperback/toolchain, @paperback/types, Cheerio, TypeScript, ESLint, Prettier, and tsx, are distributed under their respective licenses. Those projects are not part of, and do not endorse, BatCave.
+Third-party build dependencies, including @paperback/toolchain, @paperback/types, Cheerio, TypeScript, ESLint, and Prettier, are distributed under their respective licenses. Those projects are not part of, and do not endorse, BatCave or ZipComic.

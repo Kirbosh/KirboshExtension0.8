@@ -10,6 +10,8 @@
   },
   "include": [
     "../src/KirboshBatCave/KirboshBatCaveParser.ts",
-    "./KirboshBatCaveParser.test.ts"
+    "../src/KirboshZipComic/KirboshZipComicParser.ts",
+    "./KirboshBatCaveParser.test.ts",
+    "./KirboshZipComicParser.test.ts"
   ]
 }

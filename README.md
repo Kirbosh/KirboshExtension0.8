@@ -2,21 +2,20 @@
 
 A focused, English-language Western comics repository for the App Store release of Paperback 0.8.
 
-## Available source
+## Available sources
 
-| Source  | Language | Rating | Features                                                                                               |
-| ------- | -------- | ------ | ------------------------------------------------------------------------------------------------------ |
-| BatCave | English  | Mature | Search, pagination, popular/latest/catalogue sections, metadata, complete issue lists, and issue pages |
+| Source   | Language | Rating | Features                                                                                               |
+| -------- | -------- | ------ | ------------------------------------------------------------------------------------------------------ |
+| BatCave  | English  | Mature | Search, pagination, popular/latest/catalogue sections, metadata, complete issue lists, and issue pages |
+| ZipComic | English  | Mature | Search, pagination, latest updates, metadata, complete issue lists, and issue pages                    |
 
-BatCave uses Paperback 0.8's Cloudflare bypass flow. Before the first search, open BatCave in Paperback, tap the cloud icon in the source toolbar, complete BatCave's verification, close the verification view, and retry. Repeat this when BatCave expires its clearance cookie. No account, copied cookies, or credentials are required or included.
-
-No second source is included. ReadComicsOnline is unavailable or challenge-gated, ReadAllComics is presently unreliable, and download-only or public-domain-only sites do not meet this repository’s catalogue and reader requirements. A source will only be added after it passes the same live checks as BatCave.
+Both sources use Paperback 0.8's standard Cloudflare bypass flow. Before the first search, open the source in Paperback, tap the cloud icon in the source toolbar, complete the site's verification, close the verification view, and retry. Repeat this when the site expires its clearance cookie. No account, copied cookies, or credentials are required or included.
 
 ## Install in Paperback 0.8
 
 1. On the iPad, open [the repository website](https://kirbosh.github.io/KirboshExtension0.8/0.8-stable) in Safari.
 2. Tap **Add to Paperback** and approve the prompt in Paperback.
-3. In Paperback, open the new repository and install **BatCave**.
+3. In Paperback, open the new repository and install **BatCave**, **ZipComic**, or both.
 
 If the button is unavailable, copy this repository base URL into Paperback’s repository manager:
 
@@ -26,9 +25,9 @@ https://kirbosh.github.io/KirboshExtension0.8/0.8-stable
 
 This repository intentionally uses Paperback 0.8 types, manifests, tooling, and installation format. It is not compatible with Paperback 0.9.
 
-## Source identity and migration
+## Source identities and migration
 
-The source identifier is `KirboshBatCave`. This deliberately differs from Kakarot’s inherited `BatCave` identifier so the two repositories cannot silently replace or conflict with one another.
+The source identifiers are `KirboshBatCave` and `KirboshZipComic`. These deliberately differ from Kakarot’s inherited identifiers so the repositories cannot silently replace or conflict with one another.
 
 Existing entries saved with Kakarot’s old BatCave source therefore require migration:
 
@@ -59,4 +58,4 @@ This fork is based on [KakarotExtension 0.8](https://github.com/karrot0/kakarote
 
 The repository continues the upstream `GPL-3.0-or-later` license declaration. See [LICENSE](LICENSE) and [NOTICE](NOTICE). Paperback’s 0.8 toolchain and types retain their own upstream licenses.
 
-Paperback is not affiliated with BatCave or the publishers represented in its catalogue.
+Paperback is not affiliated with BatCave, ZipComic, or the publishers represented in their catalogues.
