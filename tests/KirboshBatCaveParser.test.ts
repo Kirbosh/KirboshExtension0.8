@@ -85,7 +85,7 @@ test('URL normalization is Paperback 0.8 safe and does not need the URL global',
 })
 
 test('search routes use BatCave canonical page one and paginated later pages', () => {
-    assert.equal(batcaveSearchUrl('Batman', 1), 'https://batcave.biz/search/Batman')
+    assert.equal(batcaveSearchUrl('Batman', 1), 'https://batcave.biz/search/Batman/')
     assert.equal(
         batcaveSearchUrl('Spider Man', 2),
         'https://batcave.biz/search/Spider%20Man/page/2/',

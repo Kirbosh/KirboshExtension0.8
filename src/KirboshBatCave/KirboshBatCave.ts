@@ -35,7 +35,7 @@ import {
 } from './KirboshBatCaveParser'
 
 export const KirboshBatCaveInfo: SourceInfo = {
-    version: '1.0.1',
+    version: '1.0.2',
     name: 'BatCave',
     description: 'Western comics from BatCave, maintained for Paperback 0.8.',
     author: 'Kirbosh & Karrot',

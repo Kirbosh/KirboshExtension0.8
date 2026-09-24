@@ -25,7 +25,7 @@ if (manifest.sources.length !== 1 || manifest.sources[0].id !== 'KirboshBatCave'
 const source = manifest.sources[0]
 if (
     source.name !== 'BatCave' ||
-    source.version !== '1.0.1' ||
+    source.version !== '1.0.2' ||
     source.contentRating !== 'MATURE' ||
     source.websiteBaseURL !== 'https://batcave.biz'
 ) {
@@ -43,7 +43,7 @@ for (const expected of [
     expectedDeepLink,
     'name="viewport" content="width=device-width, initial-scale=1"',
     'KirboshBatCave/includes/icon.png',
-    'Version 1.0.1',
+    'Version 1.0.2',
     'Mature',
     'English',
 ]) {
@@ -94,4 +94,4 @@ if (png.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a') {
     throw new Error('BatCave icon is not a valid PNG')
 }
 
-console.log('Verified one-source Paperback 0.8 repository: KirboshBatCave 1.0.1')
+console.log('Verified one-source Paperback 0.8 repository: KirboshBatCave 1.0.2')

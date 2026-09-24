@@ -110,8 +110,8 @@ export function batcaveSearchUrl(title: string, page: number): string {
             : `${BATCAVE_DOMAIN}/comix/page/${safePage}/`
     }
 
-    const searchRoot = `${BATCAVE_DOMAIN}/search/${encodeURIComponent(searchTerm)}`
-    return safePage === 1 ? searchRoot : `${searchRoot}/page/${safePage}/`
+    const searchRoot = `${BATCAVE_DOMAIN}/search/${encodeURIComponent(searchTerm)}/`
+    return safePage === 1 ? searchRoot : `${searchRoot}page/${safePage}/`
 }
 
 function lazyImage(rawUrl: string): string {
