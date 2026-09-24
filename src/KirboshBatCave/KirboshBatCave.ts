@@ -35,7 +35,7 @@ import {
 } from './KirboshBatCaveParser'
 
 export const KirboshBatCaveInfo: SourceInfo = {
-    version: '1.0.2',
+    version: '1.0.3',
     name: 'BatCave',
     description: 'Western comics from BatCave, maintained for Paperback 0.8.',
     author: 'Kirbosh & Karrot',
@@ -72,17 +72,21 @@ export class KirboshBatCave
         interceptor: {
             interceptRequest: async (request: Request): Promise<Request> => {
                 request.url = request.url.replace(/^http:/i, 'https:')
-                // Paperback 0.8 runs extensions in JavaScriptCore, where the browser URL
-                // global is unavailable on older iOS versions. Keep this check string-only.
-                const imageRequest = /^https:\/\/img\.batcave\.biz(?:[/:]|$)/i.test(request.url)
+                // Some BatCave chapters borrow images from readcomicsonline.ru, which rejects
+                // BatCave as the referer. Keep this string-only for Paperback 0.8 JavaScriptCore.
+                const requestOrigin = /^https:\/\/(?:[^/]+\.)?readcomicsonline\.ru(?:[/:]|$)/i.test(
+                    request.url,
+                )
+                    ? 'https://readcomicsonline.ru'
+                    : BATCAVE_DOMAIN
                 request.headers = {
                     ...(request.headers ?? {}),
-                    referer: imageRequest ? `${BATCAVE_DOMAIN}/` : BATCAVE_DOMAIN,
+                    origin: requestOrigin,
+                    referer: requestOrigin,
                     'user-agent': await this.requestManager.getDefaultUserAgent(),
-                    accept: imageRequest
-                        ? 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8'
-                        : 'text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8',
-                    'accept-language': 'en-US,en;q=0.8',
+                    accept: 'text/html,application/xhtml+xml,application/json;q=0.9,image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+                    'accept-language': 'en-US,en;q=0.5',
+                    'x-requested-with': 'com.batcave.android',
                 }
                 return request
             },
@@ -267,33 +271,48 @@ export class KirboshBatCave
         const newsId = mangaId.match(/^\d+/)?.[0]
         if (!newsId) throw new Error(`BatCave title ID is invalid: ${mangaId}`)
 
-        const readerUrl = `${BATCAVE_DOMAIN}/reader/${newsId}/${encodeURIComponent(chapterId)}`
-        const readerData = parseReaderData(await this.requestHtml(readerUrl))
-        let pages = readerData.images
-
-        if (!pages.length && readerData.usesAjax) {
-            const response = await this.requestManager.schedule(
-                App.createRequest({
-                    url: `${BATCAVE_DOMAIN}/engine/ajax/controller.php?mod=api&action=reader/getChapterData`,
-                    method: 'POST',
-                    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-                    data: `news_id=${encodeURIComponent(newsId)}&chapter_id=${encodeURIComponent(
-                        chapterId,
-                    )}`,
-                }),
-                1,
+        // BatCave's current reader ships without page URLs and loads them from this endpoint.
+        // Going straight to it avoids another page request that Cloudflare can interrupt.
+        const response = await this.requestManager.schedule(
+            App.createRequest({
+                url: `${BATCAVE_DOMAIN}/engine/ajax/controller.php?mod=api&action=reader/getChapterData`,
+                method: 'POST',
+                headers: { 'content-type': 'application/x-www-form-urlencoded' },
+                data: `news_id=${encodeURIComponent(newsId)}&chapter_id=${encodeURIComponent(
+                    chapterId,
+                )}`,
+            }),
+            1,
+        )
+        const responseData = response.data ?? ''
+        if (
+            response.status === 403 ||
+            response.status === 503 ||
+            looksLikeCloudflareChallenge(responseData)
+        ) {
+            throw new Error(
+                'BatCave needs Cloudflare verification. Open the BatCave source, tap the cloud icon, complete the check, then retry.',
             )
-            if (response.status < 200 || response.status >= 400) {
-                throw new Error(`BatCave reader returned HTTP ${response.status}`)
-            }
-            try {
-                const parsed = JSON.parse(response.data ?? '') as { data?: { images?: string[] } }
-                pages = parsed.data?.images ?? []
-            } catch {
-                throw new Error('BatCave reader returned invalid JSON')
-            }
+        }
+        if (response.status < 200 || response.status >= 400) {
+            throw new Error(`BatCave reader returned HTTP ${response.status}`)
         }
 
+        let parsed: { success?: boolean; error?: string; data?: { images?: string[] } }
+        try {
+            parsed = JSON.parse(responseData) as {
+                success?: boolean
+                error?: string
+                data?: { images?: string[] }
+            }
+        } catch {
+            throw new Error('BatCave reader returned invalid JSON')
+        }
+        if (parsed.success === false) {
+            throw new Error(parsed.error ?? 'BatCave rejected the chapter request')
+        }
+
+        let pages = parsed.data?.images ?? []
         pages = parseReaderData(
             `<script>window.__DATA__ = ${JSON.stringify({ images: pages })};</script>`,
         ).images
@@ -307,6 +326,7 @@ export class KirboshBatCave
             url: BATCAVE_DOMAIN,
             method: 'GET',
             headers: {
+                origin: BATCAVE_DOMAIN,
                 referer: BATCAVE_DOMAIN,
                 'user-agent': await this.requestManager.getDefaultUserAgent(),
             },

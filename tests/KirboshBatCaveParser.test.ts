@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import test from 'node:test'
 
+import type { ChapterDetails, Request, RequestManager } from '@paperback/types'
+
 import {
     absoluteHttpsUrl,
     batcaveSearchUrl,
@@ -34,6 +36,10 @@ test('search parser returns complete cards and detects page two', () => {
     assert.equal(results[1]?.image, 'https://img.batcave.biz/covers/long-halloween.jpg')
     assert.equal(hasNextPage(html, 1), true)
     assert.equal(hasNextPage('<nav class="pagination__pages"><span>2</span></nav>', 2), false)
+    assert.equal(
+        hasNextPage('<div class="pagination__btn-loader"><a href="/page/2/">More</a></div>', 1),
+        true,
+    )
 })
 
 test('details parser returns current BatCave metadata and score selector', () => {
@@ -100,4 +106,63 @@ test('invalid and challenge responses fail locally without poisoning other parse
         /does not contain reader data/,
     )
     assert.equal(parseSearchResults(fixture('batman-search.html')).length, 2)
+})
+
+test('chapter details use the AJAX reader directly and normalize its pages', async () => {
+    const scheduledRequests: Request[] = []
+    const requestManager: RequestManager = {
+        requestsPerSecond: 3,
+        requestTimeout: 20000,
+        getDefaultUserAgent: async () => 'Paperback test',
+        schedule: async (request) => {
+            scheduledRequests.push(request)
+            return {
+                status: 200,
+                headers: {},
+                request,
+                data: JSON.stringify({
+                    success: true,
+                    data: {
+                        images: [
+                            '//img.batcave.biz/pages/1.jpg',
+                            'http://img.batcave.biz/pages/2.jpg',
+                        ],
+                    },
+                }),
+            }
+        },
+    }
+
+    interface AppMock {
+        createRequestManager(): RequestManager
+        createRequest(info: {
+            url: string
+            method: string
+            headers?: Record<string, string>
+            data?: unknown
+        }): Request
+        createChapterDetails(info: ChapterDetails): ChapterDetails
+    }
+
+    const testGlobal = globalThis as unknown as { App: AppMock }
+    testGlobal.App = {
+        createRequestManager: () => requestManager,
+        createRequest: (info) => ({ ...info, headers: info.headers ?? {}, cookies: [] } as Request),
+        createChapterDetails: (info) => info,
+    }
+
+    const { KirboshBatCave } = await import('../src/KirboshBatCave/KirboshBatCave')
+    const details = await new KirboshBatCave().getChapterDetails(
+        '33051-absolute-batman-2024',
+        '233578',
+    )
+
+    assert.equal(scheduledRequests.length, 1)
+    assert.match(scheduledRequests[0]?.url ?? '', /reader\/getChapterData$/)
+    assert.equal(scheduledRequests[0]?.method, 'POST')
+    assert.equal(scheduledRequests[0]?.data, 'news_id=33051&chapter_id=233578')
+    assert.deepEqual(details.pages, [
+        'https://img.batcave.biz/pages/1.jpg',
+        'https://img.batcave.biz/pages/2.jpg',
+    ])
 })

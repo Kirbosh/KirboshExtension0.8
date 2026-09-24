@@ -203,7 +203,7 @@ export function parseLatest(html: string): ParsedCard[] {
 
 export function hasNextPage(html: string, currentPage: number): boolean {
     const $ = cheerio.load(html)
-    return $('.pagination a, .pagination__pages a')
+    return $('.pagination a, .pagination__pages a, .pagination__btn-loader a')
         .toArray()
         .some((element) => {
             const text = $(element).text().trim()
