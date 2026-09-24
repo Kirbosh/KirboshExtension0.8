@@ -15108,14 +15108,16 @@ var _Sources = (() => {
   }
   function looksLikeCloudflareChallenge(html3) {
     const lower = html3.toLowerCase();
-    if (lower.includes("cf-chl-") || lower.includes("just a moment...")) return true;
+    if (lower.includes("cf-chl-") || lower.includes("just a moment...") || lower.includes("challenges.cloudflare.com") || lower.includes("pow_nonce") && lower.includes("pow_hash") || /\.open\(\s*["']POST["']\s*,\s*["']\/_v["']/.test(html3)) {
+      return true;
+    }
     const $2 = load(html3);
     return $2(SELECTORS.challenge).length > 0;
   }
 
   // src/KirboshBatCave/KirboshBatCave.ts
   var KirboshBatCaveInfo = {
-    version: "1.0.3",
+    version: "1.0.4",
     name: "BatCave",
     description: "Western comics from BatCave, maintained for Paperback 0.8.",
     author: "Kirbosh & Karrot",
@@ -15169,7 +15171,7 @@ var _Sources = (() => {
         1
       );
       const html3 = response.data ?? "";
-      if (response.status === 403 || response.status === 503) {
+      if (response.status === 403 || response.status === 503 || looksLikeCloudflareChallenge(html3)) {
         throw new Error(
           "BatCave needs Cloudflare verification. Open the BatCave source, tap the cloud icon, complete the check, then retry."
         );
@@ -15178,11 +15180,6 @@ var _Sources = (() => {
         throw new Error(`BatCave returned HTTP ${response.status} for ${url}`);
       }
       if (!html3.trim()) throw new Error(`BatCave returned an empty response for ${url}`);
-      if (looksLikeCloudflareChallenge(html3)) {
-        throw new Error(
-          "BatCave requires Cloudflare verification. Open the source in Paperback and retry."
-        );
-      }
       return html3;
     }
     partialManga(card) {
@@ -15226,28 +15223,34 @@ var _Sources = (() => {
       });
     }
     async getHomePageSections(sectionCallback) {
-      const [homeHtml, catalogueHtml] = await Promise.all([
-        this.requestHtml(BATCAVE_DOMAIN),
-        this.requestHtml(`${BATCAVE_DOMAIN}/comix/`)
-      ]);
-      sectionCallback(
-        App.createHomeSection({
-          id: "popular",
-          title: "Popular",
-          containsMoreItems: false,
-          type: import_types2.HomeSectionType.singleRowLarge,
-          items: parsePopular(homeHtml).map((card) => this.partialManga(card))
-        })
-      );
-      sectionCallback(
-        App.createHomeSection({
-          id: "latest",
-          title: "Latest",
-          containsMoreItems: true,
-          type: import_types2.HomeSectionType.singleRowNormal,
-          items: parseLatest(homeHtml).map((card) => this.partialManga(card))
-        })
-      );
+      const catalogueHtml = await this.requestHtml(`${BATCAVE_DOMAIN}/comix/`);
+      let homeHtml;
+      try {
+        homeHtml = await this.requestHtml(`${BATCAVE_DOMAIN}/`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (!message.includes("HTTP 404")) throw error;
+      }
+      if (homeHtml) {
+        sectionCallback(
+          App.createHomeSection({
+            id: "popular",
+            title: "Popular",
+            containsMoreItems: false,
+            type: import_types2.HomeSectionType.singleRowLarge,
+            items: parsePopular(homeHtml).map((card) => this.partialManga(card))
+          })
+        );
+        sectionCallback(
+          App.createHomeSection({
+            id: "latest",
+            title: "Latest",
+            containsMoreItems: true,
+            type: import_types2.HomeSectionType.singleRowNormal,
+            items: parseLatest(homeHtml).map((card) => this.partialManga(card))
+          })
+        );
+      }
       sectionCallback(
         App.createHomeSection({
           id: "catalogue",
