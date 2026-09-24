@@ -14935,8 +14935,8 @@ var _Sources = (() => {
     if (!searchTerm) {
       return safePage === 1 ? `${BATCAVE_DOMAIN}/comix/` : `${BATCAVE_DOMAIN}/comix/page/${safePage}/`;
     }
-    const searchRoot = `${BATCAVE_DOMAIN}/search/${encodeURIComponent(searchTerm)}`;
-    return safePage === 1 ? searchRoot : `${searchRoot}/page/${safePage}/`;
+    const searchRoot = `${BATCAVE_DOMAIN}/search/${encodeURIComponent(searchTerm)}/`;
+    return safePage === 1 ? searchRoot : `${searchRoot}page/${safePage}/`;
   }
   function lazyImage(rawUrl) {
     return absoluteHttpsUrl(rawUrl);
@@ -15115,7 +15115,7 @@ var _Sources = (() => {
 
   // src/KirboshBatCave/KirboshBatCave.ts
   var KirboshBatCaveInfo = {
-    version: "1.0.1",
+    version: "1.0.2",
     name: "BatCave",
     description: "Western comics from BatCave, maintained for Paperback 0.8.",
     author: "Kirbosh & Karrot",
