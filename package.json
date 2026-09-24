@@ -12,6 +12,7 @@
         "serve": "paperback serve --port 3002",
         "test": "tsc -p tests/tsconfig.json && node --test .test-output/tests/*.test.js",
         "test:device": "paperback test KirboshBatCave",
+        "test:device:zipcomic": "paperback test KirboshZipComic",
         "typecheck": "tsc --noEmit",
         "lint": "eslint --ext .ts src tests",
         "format": "prettier --write \"{src,tests,scripts}/**/*.{ts,cjs}\" \"*.{json,md}\" \".github/workflows/*.yml\"",

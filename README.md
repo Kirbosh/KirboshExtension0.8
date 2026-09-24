@@ -50,7 +50,7 @@ npm run build
 npm run verify:bundle
 ```
 
-`npm run test:device` invokes the 0.8 toolchain’s device tester and requires a reachable Paperback device configured for development.
+`npm run test:device` tests BatCave on a reachable Paperback device configured for development. `npm run test:device:zipcomic` does the same for ZipComic. Both commands use the Paperback 0.8 device tester.
 
 ## Credits and license
 
